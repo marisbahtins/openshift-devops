@@ -19,13 +19,13 @@ def version = ""
 
 // Url 
 def sonarArgs = " sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na311.openshift.opentlc.com/"
-def regiUrl = "nexus3-registry.${GUID}-nexus.apps.na311.openshift.opentlc.com"
+def regiUrl = "nexus-registry-${GUID}-nexus.apps.na311.openshift.opentlc.com"
 def mvnRelUrl = "http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases"
 
 
 
 podTemplate(
-  label: "maven",
+  label: "maven-dev",
   cloud: "openshift",
   inheritFrom: "maven",
   containers: [
@@ -40,9 +40,9 @@ podTemplate(
   // Define Maven Command. Make sure it points to the correct settings for our
   // Nexus installation. The file nexus_openshift_settings.xml needs to be in the
   // Application's name
-node('maven') {
+node('maven-dev') {
   stage('Checkout Source') {
-     git 'https://github.com/TRQ1/ParksMap.git'
+     git 'http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/test.git'
      //checkout scm
     script {
       def pom = readMavenPom file: "./${myApp}/pom.xml"
@@ -93,10 +93,11 @@ node('maven') {
 
   // Build the OpenShift Image in OpenShift. 
   stage('Build OpenShift Image') {
+      sh "oc start-build nationalparks --follow --from-file=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases/com/openshift/evg/roadshow/nationalparks/${version}/nationalparks-${version}.jar -n ${GUID}-parks-dev"
       openshift.withCluster() {
                 openshift.withProject("${devProject}") {
                   // wait for finish
-                  openshift.selector("bc", "nationalparks").startBuild("--from-file=${mvnRelUrl}/com/openshift/evg/roadshow/nationalparks/${version}/nationalparks-${version}.jar", "--wait=true")
+                  // openshift.selector("bc", "nationalparks").startBuild("--from-file=${mvnRelUrl}/com/openshift/evg/roadshow/nationalparks/${version}/nationalparks-${version}.jar", "--wait=true")
                   // tag latest and devTag version
                   openshift.tag("nationalparks:latest", "nationalparks:${devTag}")
       }

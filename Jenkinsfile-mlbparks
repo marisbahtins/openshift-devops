@@ -19,12 +19,12 @@ def version = ""
 
 // Url 
 def sonarArgs = " sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na311.openshift.opentlc.com/"
-def regiUrl = "nexus3-registry.${GUID}-nexus.apps.na311.openshift.opentlc.com"
+def regiUrl = "nexus-registry-${GUID}-nexus.apps.na311.openshift.opentlc.com"
 def mvnRelUrl = "http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases"
 
 
 podTemplate(
-  label: "maven",
+  label: "maven-dev",
   cloud: "openshift",
   inheritFrom: "maven",
   containers: [
@@ -39,9 +39,9 @@ podTemplate(
   // Define Maven Command. Make sure it points to the correct settings for our
   // Nexus installation. The file nexus_openshift_settings.xml needs to be in the
   // Application's name
-node('maven') {
+node('maven-dev') {
   stage('Checkout Source') {
-     git 'http://github.com/TRQ1/ParksMap.git'
+     git 'http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/test.git'
      //checkout scm
     script {
       def pom = readMavenPom file: "./${myApp}/pom.xml"
@@ -92,10 +92,11 @@ node('maven') {
 
   // Build the OpenShift Image in OpenShift. 
   stage('Build OpenShift Image') {
+      sh "oc start-build mlbparks --follow --from-file=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases/com/openshift/evg/roadshow/mlbparks/${version}/mlbparks-${version}.war -n ${GUID}-parks-dev"
       openshift.withCluster() {
                 openshift.withProject("${devProject}") {
                   // wait for finish
-                  openshift.selector("bc", "mlbparks").startBuild("--from-file=${mvnRelUrl}/com/openshift/evg/roadshow/mlbparks/${version}/mlbparks-${version}.war", "--wait=true")
+                  // openshift.selector("bc", "mlbparks").startBuild("--from-file=${mvnRelUrl}/com/openshift/evg/roadshow/mlbparks/${version}/mlbparks-${version}.war", "--wait=true")
                   // tag latest and devTag version
                   openshift.tag("mlbparks:latest", "mlbparks:${devTag}")
       }
@@ -149,7 +150,7 @@ node('maven') {
   stage('Copy Image to Nexus container registry') {
     echo "Copy image to Nexus container registry"
     // TBD: Copy image to Nexus container registry
-     sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local::5000/${devProject}/mlbparks:${devTag} docker://${regiUrl}:5000/mlbparks:${devTag}"
+     sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/mlbparks:${devTag} docker://${regiUrl}:5000/mlbparks:${devTag}"
     // TBD: Tag the built image with the production tag.
     openshift.withCluster() {
       openshift.withProject("${devProject}") {
