@@ -1,2 +1,2 @@
 == Parks Map Multi-service Application
-See the individual applications for instructions.
+See the individual applications for an assignment and tests.
