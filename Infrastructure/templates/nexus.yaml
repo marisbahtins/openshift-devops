@@ -183,7 +183,7 @@ objects:
     type: ClusterIP
   status:
     loadBalancer: {}
-- apiVersion: v1
+- apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
     annotations:
@@ -207,12 +207,13 @@ objects:
   status:
     ingress:
     - conditions:
+      - lastTransitionTime: '2019-02-13T03:58:16Z'
         status: "True"
         type: Admitted
       host: nexus-registry-bccb-nexus.apps.na311.openshift.opentlc.com
       routerName: router
       wildcardPolicy: None
-- apiVersion: v1
+- apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
     annotations:
@@ -234,6 +235,7 @@ objects:
   status:
     ingress:
     - conditions:
+      - lastTransitionTime: '2019-02-13T03:58:16Z'
         status: "True"
         type: Admitted
       host: nexus3-bccb-nexus.apps.na311.openshift.opentlc.com
