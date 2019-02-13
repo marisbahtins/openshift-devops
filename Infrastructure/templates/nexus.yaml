@@ -223,7 +223,7 @@ objects:
       app: nexus3
     name: nexus3
   spec:
-    host: nexus3-4d09-nexus.apps.na311.openshift.opentlc.com
+    host: nexus3-bccb-nexus.apps.na311.openshift.opentlc.com
     port:
       targetPort: 8081-tcp
     to:
