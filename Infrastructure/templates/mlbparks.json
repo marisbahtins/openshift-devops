@@ -53,14 +53,15 @@
        "description": "Git source URI for application",
        "displayName": "Git source repository",
        "name": "GIT_URI",
-       "value": "",
+       "value": "https://github.com/TRQ1/ParksMap.git",
        "required": true
      },
      {
       "displayName": "Context Directory",
       "description": "Path within Git project to build; empty for root project directory.",
       "name": "CONTEXT_DIR",
-      "value": "MLBParks"
+      "value": "MLBParks",
+      "required": false
      },
      {
        "description": "Git branch/tag reference",
