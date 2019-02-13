@@ -41,7 +41,7 @@ podTemplate(
   // Application's name
 node('maven') {
   stage('Checkout Source') {
-     git 'http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git'
+     git 'http://github.com/TRQ1/ParksMap.git'
      //checkout scm
     script {
       def pom = readMavenPom file: "./${myApp}/pom.xml"
