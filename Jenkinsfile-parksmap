@@ -19,7 +19,7 @@ def version = ""
 
 // Url 
 def sonarArgs = " sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na311.openshift.opentlc.com/"
-def regiUrl = "nexus-registry-${GUID}-nexus.apps.na311.openshift.opentlc.com"
+def regiUrl = "nexus-registry.${GUID}-nexus.svc.cluster.local"
 def mvnRelUrl = "http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases"
 
 podTemplate(
