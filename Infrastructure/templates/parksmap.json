@@ -44,8 +44,7 @@
         "description": "Git source URI for application",
         "displayName": "Git source repository",
         "name": "GIT_URI",
-        "value": "http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git",
-        "required": true
+        "value": ""
       },
       {
         "displayName": "Context Directory",

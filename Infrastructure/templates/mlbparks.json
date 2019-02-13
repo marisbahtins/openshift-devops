@@ -53,15 +53,14 @@
        "description": "Git source URI for application",
        "displayName": "Git source repository",
        "name": "GIT_URI",
-       "value": "http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git",
+       "value": "",
        "required": true
      },
      {
       "displayName": "Context Directory",
       "description": "Path within Git project to build; empty for root project directory.",
       "name": "CONTEXT_DIR",
-      "value": "MLBParks",
-      "required": false
+      "value": "MLBParks"
      },
      {
        "description": "Git branch/tag reference",
