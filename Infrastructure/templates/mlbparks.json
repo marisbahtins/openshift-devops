@@ -358,7 +358,16 @@
                          "key": "db.name"
                        }
                      }
-                   }
+                   },
+                   {
+                    "name": "APPNAME",
+                    "valueFrom": {
+                     "configMapKeyRef": {
+                        "name": "${APPLICATION_NAME}",
+                        "key": "APPNAME"
+                      }
+                    }
+                  }                   
                  ],
                  "resources": {},
                  "livenessProbe": {
