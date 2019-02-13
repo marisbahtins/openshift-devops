@@ -115,17 +115,14 @@ oc create -f ./Infrastructure/templates/parksmap.json -n ${GUID}-parks-prod
 
 echo "Deploy mlbparks App"
 oc new-app --template=mlbparks --param APPLICATION_NAME=mlbparks-blue --param APP_NAME=mlbparks-bluegreen --param APPLICATION_HOSTNAME=mlbparks-blue.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="MLB Parks (Blue)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
-
 oc new-app --template=mlbparks --param APPLICATION_NAME=mlbparks-green --param APP_NAME=mlbparks-bluegreen --param APPLICATION_HOSTNAME=mlbparks-green.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="MLB Parks (Green)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
 
 echo "Deploy naltionalparks App"
 oc new-app --template=nationalparks --param APPLICATION_NAME=nationalparks-blue --param APP_NAME=nationalparks-bluegreen --param APPLICATION_HOSTNAME=nationalparks-blue.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="National Parks (Blue)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
-
 oc new-app --template=nationalparks --param APPLICATION_NAME=nationalparks-green --param APP_NAME=nationalparks-bluegreen --param APPLICATION_HOSTNAME=nationalparks-green.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="National Parks (Green)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
 
 echo "Deploy parksmap App"
 oc new-app --template=parksmap-web --param APPLICATION_NAME=parksmap-blue --param APP_NAME=parksmap-bluegreen --param APPLICATION_HOSTNAME=parksmap-blue.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="ParksMap (Blue)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
-
 oc new-app --template=parksmap-web --param APPLICATION_NAME=parksmap-green --param APP_NAME=parksmap-bluegreen --param APPLICATION_HOSTNAME=parksmap-green.${GUID}-parks-prod.apps.na311.openshift.opentlc.com --param CONFIG_APPNAME="ParksMap (Green)" --param MAVEN_MIRROR_URL=http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/ -n ${GUID}-parks-prod
 
 echo "Expose bluegreen route"
@@ -153,13 +150,6 @@ echo "Add green route to bluegreen"
 oc patch route/mlbparks-bluegreen -p '{"spec":{"to":{"name":"mlbparks-green"}}}' -n ${GUID}-parks-prod
 oc patch route/nationalparks-bluegreen -p '{"spec":{"to":{"name":"nationalparks-green"}}}' -n ${GUID}-parks-prod
 oc patch route/parksmap -p '{"spec":{"to":{"name":"parksmap-green"}}}' -n ${GUID}-parks-prod
-oc label route nationalparks-blue-green type=parksmap-backend -n ${GUID}-parks-prod
-oc label route mlbparks-bluegreen type=parksmap-backend -n ${GUID}-parks-prod
-oc label route nationalparks-blue type=parksmap-backend -n ${GUID}-parks-prod
-oc label route mlbparks-blue type=parksmap-backend -n ${GUID}-parks-prod
-oc label route nationalparks-green type=parksmap-backend -n ${GUID}-parks-prod
-oc label route mlbparks-green type=parksmap-backend -n ${GUID}-parks-prod
-oc label route mlbparks-bluegreen type=parksmap-backend -n ${GUID}-parks-prod
 
 echo "Set up traffic for router"
 oc set route-backends mlbparks-bluegreen mlbparks-green=0 mlbparks-blue=100 -n ${GUID}-parks-prod

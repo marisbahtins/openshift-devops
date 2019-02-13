@@ -23,7 +23,7 @@ def regiUrl = "nexus3-registry.${GUID}-nexus.apps.na311.openshift.opentlc.com"
 def mvnRelUrl = "http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases"
 
 podTemplate(
-  label: "homework",
+  label: "maven",
   cloud: "openshift",
   inheritFrom: "maven",
   containers: [
@@ -38,7 +38,7 @@ podTemplate(
   // Define Maven Command. Make sure it points to the correct settings for our
   // Nexus installation. The file nexus_openshift_settings.xml needs to be in the
   // Application's name
-node('homework') {
+node('maven') {
   stage('Checkout Source') {
      git 'http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git'
      //checkout scm
@@ -154,7 +154,7 @@ node('homework') {
   stage('Copy Image to Nexus container registry') {
     echo "Copy image to Nexus container registry"
     // TBD: Copy image to Nexus container registry
-    // sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry-default.apps.na311.openshift.opentlc.com:5000/${devProject}/parksmap:${devTag} docker://${regiUrl}:5000/parksmap:${devTag}"
+    sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry.default.svc.cluster.local:5000/${devProject}/parksmap:${devTag} docker://${regiUrl}:5000/parksmap:${devTag}"
     // TBD: Tag the built image with the production tag.
     openshift.withCluster() {
       openshift.withProject("${devProject}") {

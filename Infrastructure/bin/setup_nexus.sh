@@ -34,46 +34,4 @@ echo "Change Project"
 oc project ${GUID}-nexus
 
 echo "Deploy nexus3 App"
-oc new-app sonatype/nexus3:latest
-
-echo "expose router for nexus3"
-oc expose svc nexus3
-
-echo "Change resources for nexus3"
-#oc rollout pause dc nexus3
-
-echo "Nexus should be ready ... trying to config nexus"
-#./Infrastructure/bin/setup_nexus3.sh admin admin123 http://$(oc get route nexus3 --template='{{ .spec.host }}' -n ${GUID}-nexus )
-
-oc patch dc nexus3 --patch='{ "spec": { "strategy": { "type": "Recreate" }}}'
-oc set resources dc nexus3 --limits=cpu=2,memory=2048Mi --requests=cpu=500m,memory=1024Mi
-
-echo "Create PVC for nexus"
-echo "apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: nexus-pvc
-spec:
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 4Gi" | oc create -f -
-
-oc set volume dc/nexus3 --add --overwrite --name=nexus3-volume-1 --mount-path=/nexus-data/ --type persistentVolumeClaim --claim-name=nexus-pvc
-
-echo "Set up checker for liveness and readiness"
-oc set probe dc/nexus3 --liveness --failure-threshold 3 --initial-delay-seconds 60 -- echo ok
-oc set probe dc/nexus3 --readiness --failure-threshold 3 --initial-delay-seconds 60 --get-url=http://:8081/
-
-
-echo "Expose router for nexus3-registry"
-oc expose dc nexus3 --port=5000 --name=nexus-registry
-oc create route edge nexus-registry --service=nexus-registry --port=5000
-
-echo "Add annotaion for route"
-oc annotate route nexus3 console.alpha.openshift.io/overview-app-route=true
-oc annotate route nexus-registry console.alpha.openshift.io/overview-app-route=false
-
-echo "Rolling out nexus App"
-#oc rollout resume dc nexus3
+oc process -f ./Infrastructure/templates/nexus.yaml | oc create -f - -n $GUID-nexus
