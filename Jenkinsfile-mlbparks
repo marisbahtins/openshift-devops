@@ -31,8 +31,8 @@ podTemplate(
   containerTemplate(
       name: "jnlp",
       image: "docker-registry.default.svc:5000/${GUID}-jenkins/jenkins-agent-appdev:latest",
-      resourceLimitMemory: "2Gi",
-      resourceLimitCpu: "2"    
+      resourceRequestMemory: "1Gi",
+      resourceLimitMemory: "2Gi"
     )
   ]
 ){
@@ -41,7 +41,7 @@ podTemplate(
   // Application's name
 node('maven-dev') {
   stage('Checkout Source') {
-     git 'https://github.com/TRQ1/ParksMap.git'
+     git ''
      //checkout scm
     script {
       def pom = readMavenPom file: "./${myApp}/pom.xml"
