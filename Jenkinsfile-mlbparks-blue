@@ -1,0 +1,215 @@
+#!groovy
+
+def GUID= "bccb"
+// Set variable globally to be available in all stages
+def myApp = "MLBParks"
+// Set Maven command to always include Nexus Settings
+def mvnCmd      = "cd ./${myApp}; pwd; mvn -s ../nexus_settings.xml"
+// Set Development and Production Project Names
+def devProject  = "${GUID}-parks-dev"
+def prodProject = "${GUID}-parks-prod"
+// Set the tag for the development image: version + build number
+def devTag      = "0.0-0"
+// Set the tag for the production image: version
+def prodTag     = "0.0"
+// Set the Application
+def activeApp = ""
+def destApp = ""
+def version = ""
+
+// Url 
+def sonarArgs = " sonar:sonar -Dsonar.host.url=http://sonarqube-${GUID}-sonarqube.apps.na311.openshift.opentlc.com/"
+def regiUrl = "nexus3-registry.${GUID}-nexus.apps.na311.openshift.opentlc.com"
+//def mvnRelUrl = "http://nexus3-q1-xyz-nexus.apps.na311.openshift.opentlc.com/repository/maven-all-public/"
+def mvnRelUrl = "http://nexus3-${GUID}-nexus.apps.na311.openshift.opentlc.com/repository/releases"
+
+node('maven-appdev') {
+  // Define Maven Command. Make sure it points to the correct settings for our
+  // Nexus installation. The file nexus_openshift_settings.xml needs to be in the
+  // Application's name
+
+  stage('Checkout Source') {
+     git 'http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git'
+     //checkout scm
+    script {
+      def pom = readMavenPom file: "./${myApp}/pom.xml"
+      version = getVersionFromPom("./${myApp}/pom.xml")
+
+      devTag  = "${version}-" + currentBuild.number
+      prodTag = "${version}"
+
+    }
+  }
+
+  // Using Maven build the war file
+  // Do not run tests in this step
+  stage('Build war') {
+    sh "${mvnCmd} -Dmaven.test.skip=true clean package"
+  }
+
+  // Using Maven run the unit tests
+  stage('Unit Tests') {
+        echo "Running Unit Tests for MLBParks"
+        try {
+          sh "${mvnCmd} test"
+        } catch(err) {
+          step([$class: 'JUnitResultArchiver', testResults: '**/target/surefire-reports/TEST-*.xml'])
+          if (currentBuild.result == "UNSTABLE") {
+            throw err
+            sh "exit 1"
+          } 
+        }
+  }
+
+  // Using Maven call SonarQube for Code Analysis
+  stage('Code Analysis') {
+    echo "Running Code Analysis"
+    sh "${mvnCmd} ${sonarArgs}"
+  }
+
+  // Publish the latest war file to Nexus. This needs to go into <nexusurl>/repository/releases.
+  // Using the properties from the pom.xml file construct a filename that includes the version number from the pom.xml file
+  stage('Publish to Nexus') {
+    echo "Publish to Nexus"
+    // deploy war
+    sh "${mvnCmd} deploy -DskipTests=true -DaltDeploymentRepository=nexus::default::${mvnRelUrl}"
+    // TBD  
+    echo "Push to Nexus Done"  
+
+  }
+
+  // Build the OpenShift Image in OpenShift. 
+  stage('Build OpenShift Image') {
+      openshift.withCluster() {
+                openshift.withProject("${devProject}") {
+                  // wait for finish
+                  openshift.selector("bc", "mlbparks").startBuild("--from-file=${mvnRelUrl}/com/openshift/evg/roadshow/mlbparks/${version}/mlbparks-${version}.war", "--wait=true")
+                  // tag latest and devTag version
+                  openshift.tag("mlbparks:latest", "mlbparks:${devTag}")
+      }
+    }
+  }  
+  stage('Deploy to Dev') {
+    // Patch the DeploymentConfig so that it points to the latest TestingCandidate-${version} Image.
+    // Replace xyz-mlbparks-dev with the name of your dev project
+    echo "Deploy container image to Development Project"
+    openshift.withProject("${devProject}"){
+      openshift.set("image", "dc", "mlbparks", "mlbparks=docker-registry.default.svc:5000/${devProject}/mlbparks:${devTag}")
+      //def configmap = openshift.create('configmap', 'tasks-config', '--from-file=./Infrastructor/template/application-users.properties')
+      // deploy the built image by using latest
+      openshift.selector("dc", "mlbparks").rollout().latest(); 
+      // Wait for application to be deployed
+      def dc = openshift.selector("dc", "mlbparks").object()
+      def dc_version = dc.status.latestVersion
+      def rc = openshift.selector("rc", "mlbparks-${dc_version}").object()
+      echo "Waiting for ReplicationController mlbparks-${dc_version} to be ready"
+      while (rc.spec.replicas != rc.status.readyReplicas) {
+        sleep 5
+        rc = openshift.selector("rc", "mlbparks-${dc_version}").object()
+      }      
+
+   }
+  }
+
+  // Run some integration tests (see the openshift-mlbparks Github Repository README.md for ideas).
+  // Once the tests succeed tag the image as ProdReady-${version}
+  stage('Integration Test') {
+      echo "Running Integration Tests"
+      script {
+        def status = "000"
+
+        // healthz task
+        echo "healthz task"
+        status = sh(returnStdout: true, script: "curl -sw '%{response_code}' -o /dev/null -H 'Accpet: application/json' -X GET http://mlbparks-${GUID}-parks-dev.apps.na311.openshift.opentlc.com/ws/healthz").trim()
+        if (status != "200") {
+            error 'Integration Healthz Test Failed!'
+        }
+        // info task
+        echo "info tasks"
+        status = sh(returnStdout: true, script: "curl -sw '%{response_code}' -o /dev/null -H 'Accpet: application/json' -X GET http://mlbparks-${GUID}-parks-dev.apps.na311.openshift.opentlc.com/ws/info").trim()
+        if (status != "200") {
+            error 'Integration Info Test Failed!'
+        }
+      }
+  }
+
+  // Copy Image to Nexus container registry
+  stage('Copy Image to Nexus container registry') {
+    echo "Copy image to Nexus container registry"
+    // TBD: Copy image to Nexus container registry
+    // sh "skopeo copy --src-tls-verify=false --dest-tls-verify=false --src-creds openshift:\$(oc whoami -t) --dest-creds admin:admin123 docker://docker-registry-default.apps.na311.openshift.opentlc.com:5000/${devProject}/mlbparks:${devTag} docker://${regiUrl}:5000/mlbparks:${devTag}"
+    // TBD: Tag the built image with the production tag.
+    openshift.withCluster() {
+      openshift.withProject("${devProject}") {
+        openshift.tag("mlbparks:${devTag}", "mlbparks:${prodTag}")
+      }
+    }
+  }
+
+  stage('Blue/Green Production Deployment') {
+    echo "Blue/Green Deployment"
+    openshift.withCluster() {
+    openshift.withProject("${prodProject}") {
+      activeApp = openshift.selector("route", "mlbparks-bluegreen").object().spec.to.name
+      if (activeApp == "mlbparks-green") {
+        destApp = "mlbparks-blue"
+      }
+      echo "Active Application:      " + activeApp
+      echo "Destination Application: " + destApp
+
+      // Update the Image on the Production Deployment Config
+      def dc = openshift.selector("dc/${destApp}").object()
+      dc.spec.template.spec.containers[0].image="docker-registry.default.svc:5000/${devProject}/mlbparks:${prodTag}"
+      openshift.apply(dc)
+
+      // Deploy the inactive application.
+      echo "Starting dc rollouting"
+      openshift.selector("dc", "${destApp}").rollout().latest();
+
+      // Wait for application to be deployed
+      echo "dc_prod"
+      def dc_prod = openshift.selector("dc", "${destApp}").object()
+      echo "dc_version"
+      def dc_version = dc_prod.status.latestVersion
+      echo "rc_prod"
+      def rc_prod = openshift.selector("rc", "${destApp}-${dc_version}").object()
+      echo "Waiting for ${destApp} to be ready"
+      while (rc_prod.spec.replicas != rc_prod.status.readyReplicas) {
+        sleep 5
+        rc_prod = openshift.selector("rc", "${destApp}-${dc_version}").object()
+        }
+        }
+      }
+  }
+
+    stage('Switch over to new Version') {
+        // TBD: Stop for approval
+        echo "Switching Production application to ${destApp}."
+        script {
+          openshift.withCluster() {
+          openshift.withProject("${prodProject}") {
+            def route = openshift.selector("route/mlbparks-bluegreen").object()
+            route.spec.to.name="${destApp}"
+            openshift.apply(route)
+          }
+        }
+        // TBD: After approval execute the switch
+
+      }
+  }
+}
+
+// Convenience Functions to read variables from the pom.xml
+// Do not change anything below this line.
+def getVersionFromPom(pom) {
+  def matcher = readFile(pom) =~ '<version>(.+)</version>'
+  matcher ? matcher[0][1] : null
+}
+def getGroupIdFromPom(pom) {
+  def matcher = readFile(pom) =~ '<groupId>(.+)</groupId>'
+  matcher ? matcher[0][1] : null
+}
+def getArtifactIdFromPom(pom) {
+  def matcher = readFile(pom) =~ '<artifactId>(.+)</artifactId>'
+  matcher ? matcher[0][1] : null
+}

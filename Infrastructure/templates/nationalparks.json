@@ -1,0 +1,462 @@
+{
+    "kind": "Template",
+    "apiVersion": "v1",
+    "metadata": {
+      "name": "nationalparks",
+      "annotations": {
+        "iconClass": "icon-java",
+        "description": "Application template NationalParks backend running on SpringBoot and using mongodb",
+        "tags": "roadshow,springboot,roadshow-backend,java,mongodb"
+      }
+    },
+    "labels": {
+      "application": "nationalparks",
+      "createdBy": "nationalparks-template"
+    },
+    "parameters": [
+      {
+        "description": "The name for the nationalparks application.",
+        "displayName": "Application Name",
+        "name": "APPLICATION_NAME",
+        "value": "nationalparks",
+        "required": true
+      },
+      {
+        "description": "Custom hostname for nationalparks application.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
+        "displayName": "Application Name",
+        "name": "APPLICATION_HOSTNAME"
+      },
+      {
+        "description": "Custom Application for application.",
+        "displayName": "Application Name",
+        "name": "APP_NAME",
+		"value": "",
+        "required": true
+      },
+      {
+        "description": "Custom Config's Appname for application.",
+        "displayName": "Appname for configmap",
+        "name": "CONFIG_APPNAME",
+		"value": "",
+        "required": true
+      },
+      {
+        "description": "The name for the mongodb application.",
+        "displayName": "Mongodb App",
+        "name": "MONGODB_APPLICATION_NAME",
+        "value": "mongodb",
+        "required": true
+      },
+      {
+        "description": "Git source URI for application",
+        "displayName": "Git source repository",
+        "name": "GIT_URI",
+        "value": "http://gogs-q1-xyz-gogs.apps.na311.openshift.opentlc.com/test1/ParksMap.git",
+        "required": true
+      },
+      {
+        "description": "Git branch/tag reference",
+        "displayName": "Git branch/tag reference",
+        "name": "GIT_REF",
+        "value": "master",
+        "required": true
+      },
+      {
+        "displayName": "Context Directory",
+        "description": "Path within Git project to build; empty for root project directory.",
+        "name": "CONTEXT_DIR",
+        "value": "Nationalparks",
+        "required": false
+       },
+      {
+        "description": "Maven mirror url. If nexus is deployed locally, use nexus url (e.g. http://nexus.ci:8081/content/groups/public/)",
+        "displayName": "Maven mirror url",
+        "name": "MAVEN_MIRROR_URL",
+        "required": false
+      },
+      {
+        "description": "Database name",
+        "displayName": "Database name",
+        "name": "MONGODB_DATABASE",
+        "value": "parks",
+        "required": true
+      },
+      {
+        "description": "Disable data file preallocation.",
+        "name": "MONGODB_NOPREALLOC"
+      },
+      {
+        "description": "Set MongoDB to use a smaller default data file size.",
+        "name": "MONGODB_SMALLFILES"
+      },
+      {
+        "description": "Runs MongoDB in a quiet mode that attempts to limit the amount of output.",
+        "name": "MONGODB_QUIET"
+      },
+      {
+        "description": "Database user name",
+        "displayName": "Database user name",
+        "name": "MONGODB_USER",
+        "value": "mongodb",
+        "required": true
+      },
+      {
+        "description": "Database user password",
+        "displayName": "Database user password",
+        "name": "MONGODB_PASSWORD",
+        "value": "mongodb",
+        "required": true
+      },
+      {
+        "description": "Database admin password",
+        "displayName": "Database admin password",
+        "name": "MONGODB_ADMIN_PASSWORD",
+        "value": "mongodb",
+        "required": true
+      },
+      {
+        "description": "Github trigger secret",
+        "displayName": "GitHub Trigger",
+        "name": "GITHUB_TRIGGER_SECRET",
+        "from": "[a-zA-Z0-9]{8}",
+        "generate": "expression",
+        "required": true
+      },
+      {
+        "description": "Generic build trigger secret",
+        "displayName": "Generic Trigger",
+        "name": "GENERIC_TRIGGER_SECRET",
+        "from": "[a-zA-Z0-9]{8}",
+        "generate": "expression",
+        "required": true
+      }
+    ],
+    "objects": [
+      {
+        "kind": "ConfigMap",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}",
+          "labels": {
+            "app": "${APPLICATION_NAME}",
+            "component": "${APPLICATION_NAME}",
+            "role": "config"
+          }
+        },
+        "data": {
+          "APPNAME": "${CONFIG_APPNAME}",
+          "db.user": "${MONGODB_USER}",
+          "db.password": "${MONGODB_PASSWORD}",
+          "db.name": "${MONGODB_DATABASE}",
+          "db.properties": "db.user=${MONGODB_USER}\ndb.password=${MONGODB_PASSWORD}\ndb.name=${MONGODB_DATABASE}",
+          "application.properties": "spring.data.mongodb.uri=mongodb://${MONGODB_USER}:${MONGODB_PASSWORD}@${MONGODB_APPLICATION_NAME}:27017/${MONGODB_DATABASE}"
+        }
+      },
+      {
+        "kind": "ImageStream",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "s2i-java"
+        },
+        "spec": {
+          "tags": [
+            {
+              "name": "latest",
+              "from": {
+                "kind": "DockerImage",
+                "name": "jorgemoralespou/s2i-java"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "ImageStream",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}"
+        },
+        "spec": {
+          "tags": [
+            {
+              "name": "latest"
+            }
+          ]
+        }
+      },
+      {
+        "kind": "BuildConfig",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}",
+          "labels": {
+            "app": "${APP_NAME}",
+            "build": "${APPLICATION_NAME}"
+          }
+        },
+        "spec": {
+          "triggers": [
+            {
+              "type": "GitHub",
+              "github": {
+                "secret": "${GITHUB_TRIGGER_SECRET}"
+              }
+            },
+            {
+              "type": "Generic",
+              "generic": {
+                "secret": "${GENERIC_TRIGGER_SECRET}"
+              }
+            },
+            {
+              "type": "ConfigChange"
+            },
+            {
+              "type": "ImageChange"
+            }
+          ],
+          "runPolicy": "Serial",
+          "source": {
+            "type": "Git",
+            "git": {
+              "uri": "${GIT_URI}",
+              "ref": "${GIT_REF}"
+            }
+          },
+          "strategy": {
+            "type": "Source",
+            "sourceStrategy": {
+              "from": {
+                "kind": "ImageStreamTag",
+                "name": "s2i-java:latest"
+              },
+              "env": [
+                {
+                  "name": "MAVEN_ARGS",
+                  "value": "clean install spring-boot:repackage -DskipTests -Dcom.redhat.xpaas.repo.redhatga"
+                },
+                {
+                  "name": "MAVEN_MIRROR_URL",
+                  "value": "${MAVEN_MIRROR_URL}"
+                }
+              ],
+              "incremental": false
+            }
+          },
+          "output": {
+            "to": {
+              "kind": "ImageStreamTag",
+              "name": "${APPLICATION_NAME}:latest"
+            }
+          },
+          "resources": {},
+          "postCommit": {}
+        }
+      },
+      {
+        "kind": "DeploymentConfig",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}",
+          "labels": {
+            "app": "${APP_NAME}",
+            "component": "${APPLICATION_NAME}",
+            "role": "backend"
+          }
+        },
+        "spec": {
+          "strategy": {
+            "type": "Rolling",
+            "rollingParams": {
+              "updatePeriodSeconds": 1,
+              "intervalSeconds": 1,
+              "timeoutSeconds": 600,
+              "maxUnavailable": "25%",
+              "maxSurge": "25%",
+              "post": {
+                "failurePolicy": "Ignore",
+                "execNewPod": {
+                  "command": [
+                    "curl",
+                    "-s",
+                    "http://${APPLICATION_NAME}:8080/ws/data/load"
+                  ],
+                  "containerName": "${APPLICATION_NAME}"
+                }
+              }
+            },
+            "resources": {}
+          },
+          "triggers": [
+            {
+              "type": "ConfigChange"
+            },
+            {
+              "type": "ImageChange",
+              "imageChangeParams": {
+                "automatic": true,
+                "containerNames": [
+                  "${APPLICATION_NAME}"
+                ],
+                "from": {
+                  "kind": "ImageStreamTag",
+                  "name": "${APPLICATION_NAME}:latest"
+                }
+              }
+            }
+          ],
+          "replicas": 1,
+          "test": false,
+          "selector": {
+            "component": "${APPLICATION_NAME}"
+          },
+          "template": {
+            "metadata": {
+              "labels": {
+                "component": "${APPLICATION_NAME}"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "${APPLICATION_NAME}",
+                  "image": "${APPLICATION_NAME}",
+                  "ports": [
+                    {
+                      "containerPort": 8080,
+                      "protocol": "TCP"
+                    }
+                  ],
+                  "env": [
+                    {
+                      "name": "KUBERNETES_NAMESPACE",
+                      "valueFrom": {
+                        "fieldRef": {
+                          "fieldPath": "metadata.namespace"
+                        }
+                      }
+                    },
+                    {
+                      "name": "DB_HOST",
+                      "value": "${MONGODB_APPLICATION_NAME}"
+                    },
+                    {
+                        "name": "DB_USERNAME",
+                        "valueFrom": {
+                         "configMapKeyRef": {
+                            "name": "${APPLICATION_NAME}",
+                            "key": "db.user"
+                          }
+                        }
+                      },
+                      {
+                        "name": "DB_PASSWORD",
+                        "valueFrom": {
+                         "configMapKeyRef": {
+                            "name": "${APPLICATION_NAME}",
+                            "key": "db.password"
+                          }
+                        }
+                      },
+                      {
+                        "name": "DB_NAME",
+                        "valueFrom": {
+                         "configMapKeyRef": {
+                            "name": "${APPLICATION_NAME}",
+                            "key": "db.name"
+                          }
+                        }
+                      }
+                  ],
+                  "resources": {},
+                  "livenessProbe": {
+                    "httpGet": {
+                      "path": "/ws/healthz/",
+                      "port": 8080,
+                      "scheme": "HTTP"
+                    },
+                    "initialDelaySeconds": 120,
+                    "timeoutSeconds": 1,
+                    "periodSeconds": 10,
+                    "successThreshold": 1,
+                    "failureThreshold": 3
+                  },
+                  "readinessProbe": {
+                    "httpGet": {
+                      "path": "/ws/healthz/",
+                      "port": 8080,
+                      "scheme": "HTTP"
+                    },
+                    "initialDelaySeconds": 20,
+                    "timeoutSeconds": 1,
+                    "periodSeconds": 10,
+                    "successThreshold": 1,
+                    "failureThreshold": 3
+                  },
+                  "terminationMessagePath": "/dev/termination-log",
+                  "imagePullPolicy": "IfNotPresent"
+                }
+              ],
+              "restartPolicy": "Always",
+              "terminationGracePeriodSeconds": 30,
+              "dnsPolicy": "ClusterFirst",
+              "securityContext": {}
+            }
+          }
+        }
+      },
+      {
+        "kind": "Service",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}",
+          "labels": {
+            "app": "${APP_NAME}",
+            "component": "${APPLICATION_NAME}",
+            "type": "parksmap-backend"
+          },
+          "annotations": {
+            "service.alpha.openshift.io/dependencies": "[{\"name\":\"${MONGODB_APPLICATION_NAME}\",\"namespace\":\"\",\"kind\":\"Service\"}]"
+          }
+        },
+        "spec": {
+          "ports": [
+            {
+              "name": "8080-tcp",
+              "protocol": "TCP",
+              "port": 8080,
+              "targetPort": 8080
+            }
+          ],
+          "selector": {
+            "component": "${APPLICATION_NAME}"
+          },
+          "type": "ClusterIP",
+          "sessionAffinity": "None"
+        }
+      },
+      {
+        "kind": "Route",
+        "apiVersion": "v1",
+        "metadata": {
+          "name": "${APPLICATION_NAME}",
+          "labels": {
+            "app": "${APP_NAME}",
+            "component": "${APPLICATION_NAME}",
+            "type": "parksmap-backend"
+          }
+        },
+        "spec": {
+          "host": "${APPLICATION_HOSTNAME}",
+          "to": {
+            "kind": "Service",
+            "name": "${APPLICATION_NAME}",
+            "weight": 100
+          },
+          "port": {
+            "targetPort": "8080-tcp"
+          }
+        }
+      }
+    ]
+  }
