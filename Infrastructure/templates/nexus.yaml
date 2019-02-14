@@ -133,7 +133,7 @@ objects:
         from:
           kind: ImageStreamTag
           name: nexus3:latest
-          namespace: bccb-nexus
+          namespace: devops-nexus
       type: ImageChange
   status:
     availableReplicas: 0
@@ -194,7 +194,7 @@ objects:
       app: nexus3
     name: nexus-registry
   spec:
-    host: nexus-registry-bccb-nexus.apps.na311.openshift.opentlc.com
+    host: nexus-registry-devops-nexus.apps.na311.openshift.opentlc.com
     port:
       targetPort: 5000
     tls:
@@ -224,7 +224,7 @@ objects:
       app: nexus3
     name: nexus3
   spec:
-    host: nexus3-bccb-nexus.apps.na311.openshift.opentlc.com
+    host: nexus3-devops-nexus.apps.na311.openshift.opentlc.com
     port:
       targetPort: 8081-tcp
     to:
@@ -238,7 +238,7 @@ objects:
       - lastTransitionTime: '2019-02-13T03:58:16Z'
         status: "True"
         type: Admitted
-      host: nexus3-bccb-nexus.apps.na311.openshift.opentlc.com
+      host: nexus3-devops-nexus.apps.na311.openshift.opentlc.com
       routerName: router
       wildcardPolicy: None
 - apiVersion: v1
