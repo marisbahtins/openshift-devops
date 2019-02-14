@@ -1,6 +1,6 @@
 #!groovy
 
-def GUID= "bccb"
+def GUID= "devops"
 // Set variable globally to be available in all stages
 def myApp = "MLBParks"
 // Set Maven command to always include Nexus Settings
@@ -41,7 +41,7 @@ podTemplate(
   // Application's name
 node('maven-dev') {
   stage('Checkout Source') {
-     git 'http://github.com/TRQ1/ParksMap.git'
+     git 'https://github.com/marisbahtins/openshift-devops.git'
      //checkout scm
     script {
       def pom = readMavenPom file: "./${myApp}/pom.xml"
